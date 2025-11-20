@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, Bell, User, Menu } from "lucide-react";
+import { Search, Bell, User, Menu, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import logo from "@assets/image_1763651111406.png";
 import { cn } from "@/lib/utils";
@@ -93,6 +93,13 @@ export function Navbar() {
                 </p>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <Link href="/admin">
+              <DropdownMenuItem className="cursor-pointer">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>Admin Panel</span>
+              </DropdownMenuItem>
+            </Link>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Account</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
