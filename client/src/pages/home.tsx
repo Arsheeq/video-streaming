@@ -1,13 +1,20 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { HeroSection } from "@/components/home/HeroSection";
 import { ContentRow } from "@/components/home/ContentRow";
-import { MOVIES } from "@/lib/data";
+import { useMovies } from "@/lib/store"; // Changed import
 
 export default function Home() {
-  const featuredMovie = MOVIES[0];
-  const trendingMovies = MOVIES.slice(1, 6);
-  const sciFiMovies = MOVIES.filter(m => m.genre.includes("Sci-Fi"));
-  const newReleases = [...MOVIES].reverse();
+  // Use context instead of direct data import
+  const { movies } = useMovies();
+  
+  // Guard against empty state if needed, though initial state has data
+  if (movies.length === 0) return null;
+
+  const featuredMovie = movies[0];
+  const trendingMovies = movies.slice(1, 6);
+  const sciFiMovies = movies.filter(m => m.genre.includes("Sci-Fi"));
+  // New releases should be the most recently added (top of the list)
+  const newReleases = [...movies].slice(0, 8);
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -17,14 +24,15 @@ export default function Home() {
         <HeroSection movie={featuredMovie} />
         
         <div className="-mt-32 relative z-20 space-y-4">
+          <ContentRow title="New Releases" movies={newReleases} isLarge />
           <ContentRow title="Trending Now" movies={trendingMovies} />
           <ContentRow title="Top Sci-Fi Picks" movies={sciFiMovies} />
-          <ContentRow title="New Releases" movies={newReleases} isLarge />
-          <ContentRow title="Watch It Again" movies={MOVIES} />
+          <ContentRow title="Watch It Again" movies={movies} />
         </div>
       </main>
       
       <footer className="py-12 px-12 text-gray-500 text-sm bg-black/50 mt-12">
+         {/* Footer content same as before */}
          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="space-y-3">
                 <p>Audio Description</p>
