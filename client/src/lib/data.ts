@@ -16,6 +16,17 @@ export interface Movie {
   videoUrl: string;
 }
 
+/**
+ * INSTRUCTION FOR DEVELOPER:
+ * This is where you integrate your S3 Bucket files.
+ * 
+ * 1. Replace the 'videoUrl' values below with your actual S3 public URLs or CloudFront URLs.
+ *    Example: "https://my-bucket.s3.amazonaws.com/videos/my-movie.mp4"
+ * 
+ * 2. If using HLS/DASH for adaptive bitrate (recommended for production), point to the .m3u8 file.
+ *    Example: "https://d12345.cloudfront.net/hls/movie/index.m3u8"
+ */
+
 export const MOVIES: Movie[] = [
   {
     id: "1",
@@ -27,6 +38,7 @@ export const MOVIES: Movie[] = [
     year: 2045,
     genre: ["Sci-Fi", "Thriller", "Cyberpunk"],
     rating: "PG-13",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" 
   },
   {
@@ -39,6 +51,7 @@ export const MOVIES: Movie[] = [
     year: 2024,
     genre: ["Sci-Fi", "Drama", "Space"],
     rating: "PG",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4"
   },
   {
@@ -51,6 +64,7 @@ export const MOVIES: Movie[] = [
     year: 2025,
     genre: ["Documentary", "Action"],
     rating: "R",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
@@ -63,6 +77,7 @@ export const MOVIES: Movie[] = [
     year: 2026,
     genre: ["Thriller", "Tech", "Mystery"],
     rating: "PG-13",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
   },
   // Duplicates for scroll demo
@@ -76,6 +91,7 @@ export const MOVIES: Movie[] = [
     year: 2048,
     genre: ["Sci-Fi", "Action"],
     rating: "PG-13",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
   },
    {
@@ -88,6 +104,7 @@ export const MOVIES: Movie[] = [
     year: 2023,
     genre: ["Sci-Fi", "Drama"],
     rating: "PG",
+    // REPLACE THIS URL with your S3 file URL
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4"
   }
 ];
