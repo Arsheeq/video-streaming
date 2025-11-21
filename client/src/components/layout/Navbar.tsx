@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Search, Bell, User, Menu, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
-import logo from "@assets/image_1763651111406.png";
+import logo from "@assets/nubinix-logo.png";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {

@@ -72,6 +72,10 @@ export class AwsService {
       throw new Error("AWS service not initialized");
     }
 
+    if (!this.config.mediaConvertRole) {
+      throw new Error("MediaConvert role not configured");
+    }
+
     // This is a simplified example - you'd need to configure a proper MediaConvert job template
     const params = {
       Role: this.config.mediaConvertRole,

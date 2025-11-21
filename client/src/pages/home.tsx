@@ -4,11 +4,29 @@ import { ContentRow } from "@/components/home/ContentRow";
 import { useMovies } from "@/lib/store"; // Changed import
 
 export default function Home() {
-  // Use context instead of direct data import
-  const { movies } = useMovies();
+  const { movies, loading } = useMovies();
   
-  // Guard against empty state if needed, though initial state has data
-  if (movies.length === 0) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-white text-xl">Loading videos...</div>
+      </div>
+    );
+  }
+  
+  if (movies.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center text-gray-400">
+            <h2 className="text-2xl font-bold mb-2">No videos available</h2>
+            <p>Upload some videos in the admin panel to get started!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const featuredMovie = movies[0];
   const trendingMovies = movies.slice(1, 6);

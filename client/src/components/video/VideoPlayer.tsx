@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Hls from "hls.js";
 import { Play, Pause, Volume2, VolumeX, Settings, Maximize, Minimize, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -24,27 +25,85 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState([1]);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [quality, setQuality] = useState("auto");
+  const [quality, setQuality] = useState("-1");
+  const [qualities, setQualities] = useState<{ id: string; label: string }[]>([
+    { id: "-1", label: "Auto" }
+  ]);
+  const [currentQualityLabel, setCurrentQualityLabel] = useState("Auto");
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Quality Options Mockup - This simulates the Adaptive Bitrate Selection
-  const qualities = [
-    { id: "auto", label: "Auto (1080p)" },
-    { id: "4k", label: "4K Ultra HD" },
-    { id: "1080p", label: "1080p HD" },
-    { id: "720p", label: "720p" },
-    { id: "480p", label: "480p" },
-  ];
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    const isHLS = src.endsWith('.m3u8');
+
+    if (isHLS) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+        });
+
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          console.log('HLS manifest loaded, found ' + data.levels.length + ' quality levels');
+          
+          const levelOptions = data.levels.map((level, index) => ({
+            id: String(index),
+            label: `${level.height}p (${Math.round(level.bitrate / 1000)} kbps)`
+          }));
+          
+          setQualities([{ id: "-1", label: "Auto" }, ...levelOptions]);
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+          const level = hls.levels[data.level];
+          if (level) {
+            setCurrentQualityLabel(
+              hls.autoLevelEnabled 
+                ? `Auto (${level.height}p)` 
+                : `${level.height}p`
+            );
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.error('Network error, attempting to recover...');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.error('Media error, attempting to recover...');
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error('Fatal error, cannot recover');
+                hls.destroy();
+                break;
+            }
+          }
+        });
+
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+      }
+    } else {
+      video.src = src;
+    }
 
     const updateProgress = () => {
       if (video.duration) {
@@ -58,8 +117,11 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
     return () => {
       video.removeEventListener("timeupdate", updateProgress);
       video.removeEventListener("ended", () => setIsPlaying(false));
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+      }
     };
-  }, []);
+  }, [src]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -95,6 +157,18 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
     }
   };
 
+  const handleQualityChange = (value: string) => {
+    setQuality(value);
+    if (hlsRef.current) {
+      const level = parseInt(value);
+      if (level === -1) {
+        hlsRef.current.currentLevel = -1;
+      } else {
+        hlsRef.current.currentLevel = level;
+      }
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       videoRef.current?.parentElement?.requestFullscreen();
@@ -123,7 +197,6 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
     >
       <video
         ref={videoRef}
-        src={src}
         poster={poster}
         className="w-full h-full object-contain"
         onClick={togglePlay}
@@ -192,7 +265,7 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Quality Settings - Adaptive Bitrate Mockup */}
+            {/* Quality Settings - Real Adaptive Bitrate */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:text-primary hover:bg-white/10">
@@ -200,15 +273,19 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
-                <DropdownMenuLabel>Quality (Bitrate)</DropdownMenuLabel>
+                <DropdownMenuLabel>Quality (Adaptive Bitrate)</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuRadioGroup value={quality} onValueChange={setQuality}>
+                <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>
                   {qualities.map((q) => (
                     <DropdownMenuRadioItem key={q.id} value={q.id} className="focus:bg-white/20 focus:text-white cursor-pointer">
                       {q.label}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <div className="px-2 py-1.5 text-xs text-gray-400">
+                  Current: {currentQualityLabel}
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 

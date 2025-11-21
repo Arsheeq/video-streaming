@@ -4,7 +4,7 @@ import { useMovies } from "@/lib/store";
 import { Film, HardDrive, Activity, Users } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { movies, awsConfig } = useMovies();
+  const { movies } = useMovies();
 
   const stats = [
     { title: "Total Videos", value: movies.length, icon: Film, color: "text-blue-500" },
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
                  <span className="text-sm text-gray-300">S3 Bucket Connection</span>
                  <span className="flex items-center gap-2 text-xs text-green-400">
                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                   Connected: {awsConfig.bucketName}
+                   Connected
                  </span>
                </div>
                <div className="flex items-center justify-between">
