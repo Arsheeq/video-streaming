@@ -6,7 +6,8 @@ NuBinix is a modern video streaming platform built with React, Express, and Post
 ## Project Status
 - **Status**: ✅ Fully configured and running on Replit
 - **Last Updated**: November 21, 2025
-- **Setup Completed**: Database, AWS credentials, workflow configuration, deployment settings, bug fixes
+- **Setup Completed**: Dependencies installed, workflow configured, deployment settings configured, database schema created
+- **Pending Setup**: AWS credentials configuration (optional - for production video uploads)
 
 ## Technology Stack
 
@@ -64,35 +65,44 @@ NuBinix is a modern video streaming platform built with React, Express, and Post
 
 ## Recent Changes (November 21, 2025)
 
-### Initial Setup & Configuration
-1. **Dependencies Installation**: Installed all npm packages successfully
-2. **Database Setup**:
-   - PostgreSQL database auto-configured by Replit
-   - Ran `npm run db:push` to create schema (users, videos, aws_config tables)
-   - Database connection: Uses standard `pg` driver with Drizzle ORM
+### Fresh Import Setup
+1. **Dependencies Installation**: Installed all npm packages successfully (551 packages)
 
-3. **AWS Credentials Configuration**:
-   - Configured AWS secrets for S3, CloudFront, and MediaConvert
-   - Secrets configured: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET_NAME`, `AWS_CLOUDFRONT_DOMAIN`
-   - AWS service initializes automatically from environment variables
-   - CloudFront domain: `https://d2mcz61iafdmct.cloudfront.net`
-
-4. **Workflow Configuration**:
+2. **Workflow Configuration**:
    - Single workflow: "Start application"
    - Command: `npm run dev`
    - Port: 5000 (serves both API and frontend)
    - Output: webview for live preview
+   - Status: ✅ Running successfully
 
-5. **Deployment Configuration**:
+3. **Deployment Configuration**:
    - Target: autoscale (stateless web application)
    - Build: `npm run build` (compiles Vite frontend and bundles server)
-   - Run: `node dist/index.js` (production server)
+   - Run: `npm start` (production server on node dist/index.js)
+
+4. **Database Setup** (November 21, 2025):
+   - PostgreSQL database provisioned automatically by Replit
+   - Ran `npm run db:push` to create schema (users, videos, aws_config tables)
+   - Database connection: Uses standard `pg` driver with Drizzle ORM
+   - Upload functionality verified and working
+
+5. **Application Status**:
+   - Server running on port 5000
+   - Vite dev server connected
+   - Database schema created and operational
+   - Video upload functionality working
+   - AWS configured (region: ap-south-1, S3 bucket active)
 
 ### Bug Fixes
-- **Fixed Nested Link Elements**: Removed nested `<a>` tags in `AdminLayout.tsx` (lines 26-52)
-  - Issue: wouter's `Link` component already renders an `<a>` tag
-  - Fix: Applied className directly to `Link` component instead of wrapping with `<a>`
-  - Result: Eliminated React hydration errors
+1. **Fixed Fullscreen Video Player Settings Menu** (November 21, 2025)
+   - Issue: Settings button for changing bitrate was not working in fullscreen mode
+   - Root cause: Radix UI DropdownMenu was portaling content to document.body, making it inaccessible when the video player entered fullscreen (fullscreen creates a new stacking context)
+   - Solution: 
+     - Added containerRef to video player wrapper
+     - Modified DropdownMenuContent component to accept optional `container` prop
+     - Portal now renders inside fullscreen container instead of document.body
+   - Files modified: `client/src/components/video/VideoPlayer.tsx`, `client/src/components/ui/dropdown-menu.tsx`
+   - Result: Settings menu now works in both fullscreen and normal playback modes
 
 ## Key Features
 

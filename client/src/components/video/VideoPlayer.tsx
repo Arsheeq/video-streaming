@@ -25,6 +25,7 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -171,7 +172,7 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      videoRef.current?.parentElement?.requestFullscreen();
+      containerRef.current?.requestFullscreen();
       setIsFullscreen(true);
     } else {
       document.exitFullscreen();
@@ -191,6 +192,7 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
 
   return (
     <div 
+      ref={containerRef}
       className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden group"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
@@ -266,13 +268,13 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
 
           <div className="flex items-center gap-2">
             {/* Quality Settings - Real Adaptive Bitrate */}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:text-primary hover:bg-white/10">
                   <Settings className="h-6 w-6" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-black/90 border-white/10 text-white backdrop-blur-xl z-[9999]">
+              <DropdownMenuContent align="end" container={containerRef.current} className="bg-black/90 border-white/10 text-white backdrop-blur-xl z-[9999]">
                 <DropdownMenuLabel>Quality (Adaptive Bitrate)</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>
