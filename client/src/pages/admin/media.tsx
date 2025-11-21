@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Upload, RefreshCw, Play, Loader2 } from "lucide-react";
+import { Plus, Trash2, Upload, RefreshCw, Play, Loader2, CheckCircle, Edit } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,9 @@ export default function AdminMedia() {
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  
+  const [editVideoId, setEditVideoId] = useState<string | null>(null);
+  const [editHlsUrl, setEditHlsUrl] = useState("");
 
   useEffect(() => {
     fetchVideos();
@@ -255,6 +258,73 @@ export default function AdminMedia() {
     }
   };
 
+  const handleMarkAsReady = async (videoId: string) => {
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcodeStatus: "completed"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update video status');
+      }
+
+      toast({
+        title: "Status Updated",
+        description: "Video marked as ready. It will now appear in your library."
+      });
+
+      fetchVideos();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditHlsUrl = async () => {
+    if (!editVideoId || !editHlsUrl) return;
+
+    try {
+      const response = await fetch(`/api/videos/${editVideoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hlsUrl: editHlsUrl
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update HLS URL');
+      }
+
+      toast({
+        title: "HLS URL Updated",
+        description: "Video URL has been updated successfully."
+      });
+
+      setEditVideoId(null);
+      setEditHlsUrl("");
+      fetchVideos();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openEditDialog = (video: Video) => {
+    setEditVideoId(video.id);
+    setEditHlsUrl(video.hlsUrl || "");
+  };
+
   const handleDelete = async (videoId: string) => {
     try {
       const response = await fetch(`/api/videos/${videoId}`, {
@@ -461,6 +531,25 @@ export default function AdminMedia() {
                         Start Transcode
                       </Button>
                     )}
+                    {video.transcodeStatus === 'processing' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                        onClick={() => handleMarkAsReady(video.id)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Mark as Ready
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-blue-400 hover:text-blue-300"
+                      onClick={() => openEditDialog(video)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                     {video.hlsUrl && (
                       <Button 
                         variant="ghost" 
@@ -484,6 +573,48 @@ export default function AdminMedia() {
             )}
           </div>
         </div>
+
+        {/* Edit HLS URL Dialog */}
+        <Dialog open={!!editVideoId} onOpenChange={() => setEditVideoId(null)}>
+          <DialogContent className="bg-card border-white/10 text-white max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit HLS URL</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Update the HLS streaming URL for this video. Make sure the URL points to your .m3u8 playlist file on CloudFront.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="hls-url">HLS URL (.m3u8)</Label>
+                <Input 
+                  id="hls-url" 
+                  value={editHlsUrl}
+                  onChange={(e) => setEditHlsUrl(e.target.value)}
+                  className="bg-black/20 border-white/10 font-mono text-sm"
+                  placeholder="https://d2mcz61iafdmct.cloudfront.net/assets/..."
+                />
+                <p className="text-xs text-gray-500">
+                  Example: https://d2mcz61iafdmct.cloudfront.net/assets/khalifa/HLS/khalifa.m3u8
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setEditVideoId(null)} 
+                className="border-white/10 text-white hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditHlsUrl} 
+                className="bg-primary hover:bg-primary/90"
+              >
+                Save URL
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

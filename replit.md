@@ -1,12 +1,12 @@
 # NuBinix - Video Streaming Platform
 
 ## Overview
-NuBinix is a modern video streaming platform built with React, Express, and PostgreSQL. The application allows users to upload, transcode, and stream videos using AWS services (S3, MediaConvert, CloudFront).
+NuBinix is a modern video streaming platform built with React, Express, and PostgreSQL. The application allows users to upload, transcode, and stream videos using AWS services (S3, MediaConvert, CloudFront) with adaptive bitrate streaming.
 
 ## Project Status
-- **Status**: Imported from GitHub and successfully configured for Replit
+- **Status**: ✅ Fully configured and running on Replit
 - **Last Updated**: November 21, 2025
-- **Setup Completed**: Database migrations, workflow configuration, deployment settings
+- **Setup Completed**: Database, AWS credentials, workflow configuration, deployment settings, bug fixes
 
 ## Technology Stack
 
@@ -64,24 +64,35 @@ NuBinix is a modern video streaming platform built with React, Express, and Post
 
 ## Recent Changes (November 21, 2025)
 
-### Database Setup
-- Configured PostgreSQL database connection
-- Ran Drizzle migrations to create tables (users, videos, aws_config)
-- Modified `server/storage.ts` to use standard `pg` driver instead of `@neondatabase/serverless`
-  - Reason: Replit's local PostgreSQL doesn't support WebSocket connections required by Neon serverless
-  - Changed import from `drizzle-orm/neon-serverless` to `drizzle-orm/node-postgres`
-  - Fixed ESM import for `pg` package (using default export)
+### Initial Setup & Configuration
+1. **Dependencies Installation**: Installed all npm packages successfully
+2. **Database Setup**:
+   - PostgreSQL database auto-configured by Replit
+   - Ran `npm run db:push` to create schema (users, videos, aws_config tables)
+   - Database connection: Uses standard `pg` driver with Drizzle ORM
 
-### Workflow Configuration
-- Configured single workflow: "Start application"
-- Command: `npm run dev`
-- Port: 5000 (serves both API and frontend via Express + Vite in dev mode)
-- Output: webview
+3. **AWS Credentials Configuration**:
+   - Configured AWS secrets for S3, CloudFront, and MediaConvert
+   - Secrets configured: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET_NAME`, `AWS_CLOUDFRONT_DOMAIN`
+   - AWS service initializes automatically from environment variables
+   - CloudFront domain: `https://d2mcz61iafdmct.cloudfront.net`
 
-### Deployment Configuration
-- Target: autoscale (stateless web application)
-- Build: `npm run build` (compiles Vite frontend and bundles server)
-- Run: `node dist/index.js` (production server)
+4. **Workflow Configuration**:
+   - Single workflow: "Start application"
+   - Command: `npm run dev`
+   - Port: 5000 (serves both API and frontend)
+   - Output: webview for live preview
+
+5. **Deployment Configuration**:
+   - Target: autoscale (stateless web application)
+   - Build: `npm run build` (compiles Vite frontend and bundles server)
+   - Run: `node dist/index.js` (production server)
+
+### Bug Fixes
+- **Fixed Nested Link Elements**: Removed nested `<a>` tags in `AdminLayout.tsx` (lines 26-52)
+  - Issue: wouter's `Link` component already renders an `<a>` tag
+  - Fix: Applied className directly to `Link` component instead of wrapping with `<a>`
+  - Result: Eliminated React hydration errors
 
 ## Key Features
 
@@ -108,13 +119,21 @@ The application runs automatically via the configured workflow. The Express serv
 3. Serves static frontend in production mode
 
 ### Environment Variables
-Required environment variables:
-- `DATABASE_URL`: PostgreSQL connection string (auto-configured by Replit)
+
+**Auto-configured by Replit:**
+- `DATABASE_URL`: PostgreSQL connection string
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`: Database connection details
+
+**Required for video streaming (configured in Secrets):**
+- `AWS_ACCESS_KEY_ID`: AWS access key
+- `AWS_SECRET_ACCESS_KEY`: AWS secret key
+- `AWS_REGION`: AWS region (e.g., us-east-1)
+- `AWS_S3_BUCKET_NAME`: S3 bucket for video storage
+- `AWS_CLOUDFRONT_DOMAIN`: CloudFront distribution domain
+
+**Application defaults:**
 - `PORT`: Server port (defaults to 5000)
 - `NODE_ENV`: Environment mode (development/production)
-
-Optional AWS environment variables (configured via admin panel):
-- AWS credentials stored in database (aws_config table)
 
 ### API Endpoints
 - `GET /api/videos` - List all videos
@@ -147,9 +166,42 @@ The application is configured for Replit Autoscale deployment:
 - Frontend assets served from `dist/public`
 - Backend API bundled in `dist/index.js`
 
-## Next Steps for Users
+## AWS S3 Bucket Configuration
 
-1. **Configure AWS Credentials**: Visit `/admin/settings` to configure S3, MediaConvert, and CloudFront
+For video uploads to work, your S3 bucket **must** have CORS configured:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["PUT", "POST", "GET"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": ["ETag"]
+  }
+]
+```
+
+**To configure CORS on your S3 bucket:**
+1. Go to AWS S3 Console
+2. Select your bucket
+3. Go to Permissions → CORS configuration
+4. Add the above JSON configuration
+5. Save changes
+
+## Video Upload Flow
+
+1. **Upload to S3**: Videos are uploaded directly to `inputs/<videoId>/<filename>` in your S3 bucket
+2. **Transcoding**: AWS MediaConvert transcodes videos to multiple bitrates (requires MediaConvert configuration)
+3. **Adaptive Streaming**: Transcoded videos generate HLS playlists in `assets/<videoId>/HLS/` folder
+4. **CloudFront Delivery**: Videos are served via CloudFront CDN at:
+   ```
+   https://d2mcz61iafdmct.cloudfront.net/assets/<videoId>/HLS/<filename>.m3u8
+   ```
+
+## Next Steps
+
+1. **Configure S3 Bucket CORS**: Add the CORS configuration above to enable uploads
 2. **Upload Videos**: Use `/admin/media` to upload and manage video content
-3. **Customize Theme**: Modify `client/src/index.css` for branding
-4. **Add Authentication**: Implement user authentication (schema already includes users table)
+3. **Set up MediaConvert**: Configure AWS MediaConvert for automatic transcoding
+4. **Add Authentication**: Implement user authentication (schema includes users table)
+5. **Customize Branding**: Modify `client/src/index.css` and update logos

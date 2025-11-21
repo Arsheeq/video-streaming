@@ -23,27 +23,30 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 p-4 space-y-2">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <a className={cn(
+            <Link 
+              key={item.href} 
+              href={item.href}
+              className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors",
                 location === item.href 
                   ? "bg-primary/10 text-primary" 
                   : "text-gray-400 hover:bg-white/5 hover:text-white"
-              )}>
-                <item.icon className="w-5 h-5" />
-                {item.name}
-              </a>
+              )}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.name}
             </Link>
           ))}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-           <Link href="/">
-            <a className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white">
-              <Home className="w-5 h-5" />
-              Back to App
-            </a>
-          </Link>
+           <Link 
+             href="/"
+             className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white"
+           >
+             <Home className="w-5 h-5" />
+             Back to App
+           </Link>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors">
             <LogOut className="w-5 h-5" />
             Sign Out

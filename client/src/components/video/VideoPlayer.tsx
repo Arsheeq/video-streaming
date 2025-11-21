@@ -272,7 +272,7 @@ export function VideoPlayer({ src, poster, title, backLink = "/" }: VideoPlayerP
                   <Settings className="h-6 w-6" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
+              <DropdownMenuContent align="end" className="bg-black/90 border-white/10 text-white backdrop-blur-xl z-[9999]">
                 <DropdownMenuLabel>Quality (Adaptive Bitrate)</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>

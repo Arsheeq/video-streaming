@@ -89,7 +89,7 @@ export class AwsService {
     }
 
     const baseFilename = filename.replace(/\.[^/.]+$/, "");
-    return `https://${this.config.cloudfrontDomain}/assets/${videoId}/HLS/${baseFilename}.m3u8`;
+    return `https://${this.config.cloudfrontDomain}/assets/${baseFilename}/HLS/${baseFilename}.m3u8`;
   }
 
   getBucketName(): string {
