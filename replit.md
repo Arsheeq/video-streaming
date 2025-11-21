@@ -93,6 +93,14 @@ NuBinix is a modern video streaming platform built with React, Express, and Post
    - Video upload functionality working
    - AWS configured (region: ap-south-1, S3 bucket active)
 
+6. **Environment Configuration with .env Files** (November 21, 2025):
+   - Added dotenv package for .env file support
+   - Created `.env.example` template file with all required variables
+   - Created `.gitignore` to exclude `.env` from version control
+   - Updated `server/index.ts` to load `.env` file at startup
+   - Supports both Replit secrets and local `.env` file configuration
+   - **For local development**: Copy `.env.example` to `.env` and add your credentials
+
 ### Bug Fixes
 1. **Fixed Fullscreen Video Player Settings Menu** (November 21, 2025)
    - Issue: Settings button for changing bitrate was not working in fullscreen mode
@@ -123,18 +131,51 @@ NuBinix is a modern video streaming platform built with React, Express, and Post
 ## Development
 
 ### Running Locally
+
+#### On Replit
 The application runs automatically via the configured workflow. The Express server:
 1. Serves API routes at `/api/*`
 2. Integrates Vite dev server in development mode
 3. Serves static frontend in production mode
 
+#### On Your Local Machine
+
+1. **Clone the repository** and install dependencies:
+   ```bash
+   git clone <your-repo-url>
+   cd nubinix
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` and add your credentials:
+   - Database connection details (PostgreSQL)
+   - AWS credentials (access key, secret key, region, bucket, CloudFront domain)
+   - Session secret
+
+3. **Set up the database:**
+   ```bash
+   npm run db:push
+   ```
+
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:5000`
+
 ### Environment Variables
 
-**Auto-configured by Replit:**
+The application supports both `.env` files (for local development) and Replit Secrets (for Replit environment).
+
+**Database Configuration:**
 - `DATABASE_URL`: PostgreSQL connection string
 - `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`: Database connection details
 
-**Required for video streaming (configured in Secrets):**
+**Required for video streaming:**
 - `AWS_ACCESS_KEY_ID`: AWS access key
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key
 - `AWS_REGION`: AWS region (e.g., us-east-1)
@@ -144,6 +185,9 @@ The application runs automatically via the configured workflow. The Express serv
 **Application defaults:**
 - `PORT`: Server port (defaults to 5000)
 - `NODE_ENV`: Environment mode (development/production)
+- `SESSION_SECRET`: Secret key for session management
+
+**Important:** Never commit your `.env` file to version control. Use `.env.example` as a template.
 
 ### API Endpoints
 - `GET /api/videos` - List all videos
