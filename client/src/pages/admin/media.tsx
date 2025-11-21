@@ -84,46 +84,20 @@ export default function AdminMedia() {
     setUploading(true);
     setUploadProgress(0);
 
+    let videoId: string | null = null;
+
     try {
-      const presignedResponse = await fetch('/api/upload/presigned-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: selectedFile.name,
-          contentType: selectedFile.type || 'video/mp4'
-        })
-      });
-
-      if (!presignedResponse.ok) {
-        const error = await presignedResponse.json();
-        throw new Error(error.message);
-      }
-
-      const { uploadUrl, key } = await presignedResponse.json();
-
-      setUploadProgress(25);
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type || 'video/mp4'
-        }
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to S3');
-      }
-
-      setUploadProgress(75);
-
+      // Step 1: Create video record
+      setUploadProgress(10);
+      console.log('[Upload] Creating video record...');
+      
       const videoResponse = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
           description: description || null,
-          s3Key: key,
+          s3Key: "temp",
           thumbnailUrl: thumbnailUrl || null,
           heroImageUrl: thumbnailUrl || null,
           videoUrl: null,
@@ -132,20 +106,95 @@ export default function AdminMedia() {
           year: new Date().getFullYear(),
           genre: ["Uploaded"],
           rating: "NR",
-          transcodeStatus: "pending"
+          transcodeStatus: "uploading"
         })
       });
 
       if (!videoResponse.ok) {
-        const error = await videoResponse.json();
-        throw new Error(error.message);
+        const errorData = await videoResponse.json().catch(() => ({ message: 'Unknown error creating video record' }));
+        throw new Error(`Failed to create video record: ${errorData.message || videoResponse.statusText}`);
+      }
+
+      const video = await videoResponse.json();
+      videoId = video.id;
+      console.log('[Upload] Video record created:', videoId);
+
+      // Step 2: Get presigned URL
+      setUploadProgress(20);
+      console.log('[Upload] Requesting presigned URL...');
+      
+      const presignedResponse = await fetch('/api/upload/presigned-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: selectedFile.name,
+          contentType: selectedFile.type || 'video/mp4',
+          videoId: videoId
+        })
+      });
+
+      if (!presignedResponse.ok) {
+        const errorData = await presignedResponse.json().catch(() => ({ message: 'Unknown error getting presigned URL' }));
+        throw new Error(`Failed to get upload URL: ${errorData.message || presignedResponse.statusText}`);
+      }
+
+      const { uploadUrl, s3Key, hlsUrl } = await presignedResponse.json();
+      console.log('[Upload] Presigned URL received, uploading to S3...');
+
+      // Step 3: Upload to S3
+      setUploadProgress(30);
+      
+      let uploadResponse;
+      try {
+        uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: selectedFile,
+          headers: {
+            'Content-Type': selectedFile.type || 'video/mp4'
+          }
+        });
+      } catch (fetchError: any) {
+        console.error('[Upload] Network error during S3 upload:', fetchError);
+        throw new Error(`Network error uploading to S3: ${fetchError.message}. Check your internet connection and S3 bucket endpoint.`);
+      }
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text().catch(() => '');
+        console.error('[Upload] S3 upload failed:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          errorText
+        });
+        throw new Error(`S3 upload failed (${uploadResponse.status}): ${errorText || uploadResponse.statusText}. Check S3 bucket permissions and CORS settings.`);
+      }
+
+      console.log('[Upload] S3 upload successful');
+      setUploadProgress(80);
+
+      // Step 4: Update video record with S3 details
+      console.log('[Upload] Updating video record...');
+      
+      const updateResponse = await fetch(`/api/videos/${videoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          s3Key,
+          hlsUrl,
+          transcodeStatus: "processing"
+        })
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json().catch(() => ({ message: 'Unknown error updating video' }));
+        throw new Error(`Failed to update video record: ${errorData.message || updateResponse.statusText}`);
       }
 
       setUploadProgress(100);
+      console.log('[Upload] Upload complete!');
 
       toast({
         title: "Upload Successful",
-        description: "Video uploaded successfully. You can now start transcoding.",
+        description: "Video uploaded to S3. Lambda is now transcoding it to adaptive bitrate HLS. This may take a few minutes.",
       });
 
       setIsOpen(false);
@@ -153,9 +202,25 @@ export default function AdminMedia() {
       fetchVideos();
 
     } catch (error: any) {
+      console.error('[Upload] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        error: error
+      });
+      
+      // Clean up failed upload
+      if (videoId) {
+        try {
+          await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
+          console.log('[Upload] Cleaned up failed video record');
+        } catch (cleanupError) {
+          console.error('[Upload] Failed to cleanup video record:', cleanupError);
+        }
+      }
+      
       toast({
         title: "Upload Failed",
-        description: error.message,
+        description: error.message || "An unknown error occurred during upload. Check the browser console for details.",
         variant: "destructive"
       });
     } finally {

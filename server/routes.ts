@@ -2,45 +2,31 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { awsService } from "./aws";
-import { insertVideoSchema, insertAwsConfigSchema } from "@shared/schema";
+import { insertVideoSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  app.get("/api/aws-config", async (_req, res) => {
+  app.get("/api/aws-status", async (_req, res) => {
     try {
-      const config = await storage.getAwsConfig();
-      if (!config) {
-        return res.status(404).json({ message: "AWS configuration not found" });
+      const isConfigured = awsService.isInitialized();
+      const config = awsService.getConfig();
+      
+      if (isConfigured && config) {
+        res.json({
+          configured: true,
+          region: config.region,
+          bucketName: config.bucketName,
+          cloudfrontDomain: config.cloudfrontDomain,
+          accessKeyId: '****' + config.accessKeyId.slice(-4)
+        });
+      } else {
+        res.json({
+          configured: false,
+          message: 'AWS credentials not configured. Please add AWS secrets to enable video uploads.'
+        });
       }
-      
-      const sanitized = {
-        ...config,
-        accessKeyId: config.accessKeyId ? '****' + config.accessKeyId.slice(-4) : '',
-        secretAccessKey: '****'
-      };
-      
-      res.json(sanitized);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/aws-config", async (req, res) => {
-    try {
-      const validated = insertAwsConfigSchema.parse(req.body);
-      const config = await storage.upsertAwsConfig(validated);
-      
-      awsService.initialize(config);
-      
-      const sanitized = {
-        ...config,
-        accessKeyId: config.accessKeyId ? '****' + config.accessKeyId.slice(-4) : '',
-        secretAccessKey: '****'
-      };
-      
-      res.json(sanitized);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
     }
   });
 
@@ -99,48 +85,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/upload/presigned-url", async (req, res) => {
     try {
       if (!awsService.isInitialized()) {
-        return res.status(400).json({ message: "AWS service not configured. Please configure AWS settings first." });
+        console.error('[Upload] AWS service not configured');
+        return res.status(400).json({ 
+          message: "AWS service not configured. Please add AWS secrets (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_S3_BUCKET_NAME, AWS_CLOUDFRONT_DOMAIN) to enable uploads."
+        });
       }
 
-      const { filename, contentType } = req.body;
-      if (!filename) {
-        return res.status(400).json({ message: "Filename is required" });
+      const { filename, contentType, videoId } = req.body;
+      if (!filename || !videoId) {
+        console.error('[Upload] Missing required fields:', { filename: !!filename, videoId: !!videoId });
+        return res.status(400).json({ message: "Filename and videoId are required" });
       }
 
-      const timestamp = Date.now();
       const sanitized = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const key = `uploads/${timestamp}-${sanitized}`;
+      const key = `inputs/${videoId}/${sanitized}`;
       
+      console.log('[Upload] Generating presigned URL for:', key);
       const uploadUrl = await awsService.getPresignedUploadUrl(key, contentType || 'video/mp4');
       
-      res.json({ uploadUrl, key });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/videos/:id/transcode", async (req, res) => {
-    try {
-      if (!awsService.isInitialized()) {
-        return res.status(400).json({ message: "AWS service not configured" });
-      }
-
-      const video = await storage.getVideo(req.params.id);
-      if (!video) {
-        return res.status(404).json({ message: "Video not found" });
-      }
-
-      const outputPath = `transcoded/${req.params.id}/`;
-      const jobId = await awsService.startTranscodeJob(video.s3Key, outputPath);
+      const hlsUrl = awsService.getCloudFrontUrl(videoId, sanitized);
       
-      await storage.updateVideo(req.params.id, {
-        transcodeStatus: 'processing',
-        hlsUrl: awsService.getVideoUrl(`${outputPath}master.m3u8`)
+      console.log('[Upload] Presigned URL generated successfully');
+      res.json({ 
+        uploadUrl, 
+        s3Key: key,
+        hlsUrl
       });
-
-      res.json({ jobId, status: 'processing' });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error('[Upload] Error generating presigned URL:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to generate upload URL',
+        details: error.toString()
+      });
     }
   });
 

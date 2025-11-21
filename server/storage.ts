@@ -1,6 +1,8 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { eq, desc } from "drizzle-orm";
+
+const { Pool } = pg;
 import {
   type User,
   type InsertUser,
@@ -36,7 +38,7 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    this.db = drizzle({ client: pool });
+    this.db = drizzle(pool);
   }
 
   // User methods
